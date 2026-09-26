@@ -1,66 +1,38 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text
-from sqlalchemy.sql import func
-from .database import Base
+from .database import Field, utc_now
 
 
-class Bus(Base):
-    __tablename__ = "buses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    bus_number = Column(String(50), unique=True, nullable=False, index=True)
-    route = Column(String(100), nullable=True)
-    camera_id = Column(String(100), nullable=True)
-    status = Column(String(30), default="active")
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    last_seen = Column(DateTime, server_default=func.now())
-
-
-class Incident(Base):
-    __tablename__ = "incidents"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    incident_type = Column(String(50), nullable=False)
-    description = Column(Text, nullable=True)
-
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
-
-    confidence = Column(Float, default=0.0)
-    severity = Column(String(30), default="medium")
-    priority_score = Column(Float, default=0.0)
-
-    image_url = Column(String(500), nullable=True)
-    video_url = Column(String(500), nullable=True)
-
-    bus_number = Column(String(50), nullable=True)
-    status = Column(String(30), default="pending")
-
-    verified = Column(Boolean, default=False)
-
-    detected_at = Column(
-        DateTime,
-        server_default=func.now()
-    )
+class Document:
+    collection = ""
+    fields = ()
+    id = Field("id")
+    def __init__(self, **values):
+        for field in self.fields: setattr(self, field, values.get(field, getattr(type(self), field).default_value()))
+    @classmethod
+    def from_document(cls, document):
+        instance = cls(); instance.load_document(document); return instance
+    def load_document(self, document):
+        for field in self.fields: setattr(self, field, document.get(field, getattr(type(self), field).default_value()))
+    def to_document(self): return {field: getattr(self, field) for field in self.fields}
 
 
-class Detection(Base):
-    __tablename__ = "detections"
+class Bus(Document):
+    collection = "buses"
+    fields = ("id", "bus_number", "route", "camera_id", "status", "latitude", "longitude", "last_seen")
+    bus_number, route, camera_id = Field("bus_number"), Field("route"), Field("camera_id")
+    status, latitude, longitude, last_seen = Field("status", "active"), Field("latitude"), Field("longitude"), Field("last_seen", utc_now)
 
-    id = Column(Integer, primary_key=True, index=True)
 
-    object_type = Column(String(50), nullable=False)
-    confidence = Column(Float, default=0.0)
+class Incident(Document):
+    collection = "incidents"
+    fields = ("id", "incident_type", "description", "latitude", "longitude", "confidence", "severity", "priority_score", "image_url", "video_url", "bus_number", "status", "verified", "detected_at")
+    incident_type, description, latitude, longitude = Field("incident_type"), Field("description"), Field("latitude"), Field("longitude")
+    confidence, severity, priority_score = Field("confidence", 0.0), Field("severity", "medium"), Field("priority_score", 0.0)
+    image_url, video_url, bus_number = Field("image_url"), Field("video_url"), Field("bus_number")
+    status, verified, detected_at = Field("status", "pending"), Field("verified", False), Field("detected_at", utc_now)
 
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
 
-    bus_number = Column(String(50), nullable=True)
-
-    image_url = Column(String(500), nullable=True)
-
-    detected_at = Column(
-        DateTime,
-        server_default=func.now()
-    )
+class Detection(Document):
+    collection = "detections"
+    fields = ("id", "object_type", "confidence", "latitude", "longitude", "bus_number", "image_url", "detected_at")
+    object_type, confidence, latitude, longitude = Field("object_type"), Field("confidence", 0.0), Field("latitude"), Field("longitude")
+    bus_number, image_url, detected_at = Field("bus_number"), Field("image_url"), Field("detected_at", utc_now)

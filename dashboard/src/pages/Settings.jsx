@@ -228,7 +228,7 @@ export default function Settings({
                 <IconDatabase size={15} />
                 <strong>
                   {healthStatus?.data?.database === "connected"
-                    ? "SQLite Connected (urban_sensing.db)"
+                    ? "MongoDB Connected"
                     : "Connecting…"}
                 </strong>
               </div>
